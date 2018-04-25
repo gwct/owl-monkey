@@ -1,0 +1,560 @@
+---
+title: "Figures and code for 'Reproductive longevity predicts mutation rates in primates'"
+author: "Gregg Thomas"
+bibliography: owl-monkey-md.xml
+csl: nature.csl
+output:
+  html_document:
+    df_print: paged
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(knitr)
+library(reshape2)
+library(gridExtra)
+library(cowplot)
+```
+
+This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation ($\mu_g$) for this species. We also found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn't seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in $\mu_g$ between these species can be explained by the varying age of puberty and average age at reproduction. For full descriptions see the paper: [doi]
+
+To download this document, all accompanying code, and the data visit the following link: [github repo]
+
+---
+
+## Figures 1 and S2
+
+### Owl monkey mutation rate
+
+After filtering putative mutations (see Methods in paper) in the 14 owl monkey trios, we can calculate mutation rates ($\mu_g$) by taking into account false negative rates ($\alpha$) and the length of the callable genome ($C$) for each trio. Estimating a false negative rate allows us to correct the mutation rate for any true mutations that may have been removed by our filtering process. By using the distribution of allelic balance at all heterozygous SNP sites as an empirical CDF, we estimate $\alpha = 0.44$ while removing mutations with allelic balance less than 0.4 or or greater than 0.6 (henceforth noted as [0.4,0.6]; see FigS1 and Methods in paper). We estimate $C$ for each trio by counting the number of sites that pass the MV filters in each trio. Then, with the detected number of de novo mutations after filtering ($m_g$), the mutation rate for each trio is calculated as follows:
+
+Equation 1: $$ \mu_g = \frac{m_g}{(1 - \alpha)*(2 * C)} $$
+
+Mutation rates for all 14 trios were calculated in this fashion, with allelic balance cut-offs of [0.4,0.6] and the calculated value for $\alpha$:
+
+```{r table1}
+in_data = read.csv("owl-monkey-sites.csv", header=TRUE)
+cur_filter = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.4 & Max.AB==0.6)
+# Read data and define current filter
+
+callable_sites = cur_filter$Sites - cur_filter$Uncallable.SNP.sites
+mu_calc = cur_filter$MVs / ((1 - cur_filter$Min.FN) * (2 * callable_sites))
+cur_filter$CpG.rate = cur_filter$CpG.MVs / (2 * callable_sites)
+mu_table = data.frame(cur_filter$Trio, cur_filter$MVs, cur_filter$CpG.MVs, callable_sites, mu_calc)
+names(mu_table) = c("Trio", "Mutations", "Mutations at CpG sites", "Callable sites", "Mutation rate")
+# Re-calculate the mutation rate for posterity and subset the data for the table.
+
+kable(mu_table, caption="Table 1: Mutation rates for 14 owl monkey trios", digits=11)
+```
+
+We want to know if these mutation rates are correlated with father's age, which would be similar to the paternal-age effect seen in humans. To answer this question, we perform a simple linear regression on mutation rates with father's age at birth of the offspring ($A_M$; purple dots and line). Additionally, we perform a similar analysis on non-replicative mutations and CpG sites (blue dots and line).
+
+```{r regression, fig.width=6, fig.height=5, fig.align="center"}
+om_obs_reg = lm(mu_calc ~ cur_filter$Paternal.GT)
+fig1 = ggplot(cur_filter, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN)) + 
+  geom_smooth(method='glm', color='#b66dff', fill="#f2e6ff", fullrange=T) +
+  geom_point(color='#b66dff', size=3) +
+  geom_smooth(aes(x=Paternal.GT, y=CpG.rate), method='glm', color="#6db6ff", fill=NA, fullrange=T) +
+  geom_point(aes(x=Paternal.GT, y=CpG.rate), color="#6db6ff", size=3) +
+  scale_x_continuous(breaks = seq(1, 15, by=2)) + 
+  scale_y_continuous(breaks = seq(0, 1.8e-8, by=0.4e-8)) + 
+  scale_color_manual(breaks=c("All mutations (observed)", "CpG mutations (observed)"), values=c("All mutations        (observed)"='#b66dff', "CpG mutations (observed)"="#6db6ff")) + 
+  geom_vline(xintercept=1, linetype=3, color="grey", size=0.75) + 
+  labs(x="Age of father at conception (y)",y="Mutation rate per site\nper generation") +
+  theme_classic() +
+  theme(axis.text=element_text(size=14), 
+        axis.title=element_text(size=20), 
+        axis.title.y=element_text(margin=margin(t=0,r=20,b=0,l=0),color="black"), 
+        axis.title.x=element_text(margin=margin(t=20,r=0,b=0,l=0),color="black"),
+        axis.line=element_line(colour='#595959',size=0.75),
+        axis.ticks=element_line(colour="#595959",size = 1),
+        axis.ticks.length=unit(0.2,"cm")
+        #legend.position=c(0.1,0.87),
+        #legend.text=element_text(size=18)
+        )
+print(fig1)
+```
+
+This results in the following formula for a best fit line (purple):
+
+Equation 2: $$ \mu_g = 3.74\text{e-}9 + (A_M * 6.62\text{e-}10) $$
+
+This means that with an average genome size of $2.21$ billion base pairs that $`r signif((coef(om_obs_reg)[1] + (1 * coef(om_obs_reg)[2])) * (2 * mean(callable_sites)), digits=4)`$  mutations are accounted for by puberty at the age of 1, with an additional $`r signif(coef(om_obs_reg)[2] * (2 * mean(callable_sites)), digits=3)`$ mutations per year of the father's life after puberty. As expected, non-replicative mutations are independent of father's age (blue line).
+
+## Modeling mutation rates
+
+Large-scale pedigree sequencing projects in humans [@kong12; @michaelson12; @besenbacher15; @francioli15; @besenbacher16; @girard16; @goldmann16; @rahbari16; @wong16; @jonsson17] have shown the importance of different life-stages in the determination of mutation rates. Models for predicting mutation rates generally account for the three important life stages in the mammalian germline [@segurel14; @thomas14;]. These life stages are (1) female (F), (2) male before puberty (M0), (3) and male after puberty (M1).  The relative contribution of each of these stages must be accounted for when estimating mutation rates per generation [@thomas14] or per year [@segurel14; @thomas14; @amster16]. Here, we re-frame this model in terms of reproductive longevity. Reproductive longevity depends on both the age of puberty in males ($P_M$) and the age of the father at conception of his offspring ($A_M$) and we find that it is the main determinant of mutation rate variation in primates. We define the value of reproductive longevity ($RL$) as:
+
+**Equation 3:** $$ RL = (A_M - P_M) $$
+
+$RL$ therefore measures the amount of time mutations have accumulated post-puberty in a male, which only occurs during stage M1.
+	
+To see how reproductive longevity affects the per-generation mutation rate, $\mu_g$, we must model the combined contribution from all life stages. In any given period of time $t$, the mutation rate due to errors in DNA replication, $\mu_t$, is simply a product of the mutation rate per cell division, $\mu_c$, and the number of cell divisions that occur, $d_t$.
+
+**Equation 4:** $$\mu_g = \mu_c * d_t $$
+
+Since females (stage F) and pre-puberty males (stage M0) have a fixed number of cell divisions, their contribution to the mutation rate per-generation is constant and requires only the substitution of appropriate terms into equation 4.
+
+**Equation 5:** Female contribution to $\mu_g$ $$ \mu_{gF} = \mu_c * d_F $$
+**Equation 6:** Pre-puberty male contribution to $\mu_g$ $$ \mu_{gM0} = \mu_c * d_{M0} $$
+
+However, in males after puberty (stage M1) the number of cell divisions is a linear function of time, and the mutation rate per-generation in this life stage therefore depends on the yearly rate of cell division ($d_{yM1}$) and reproductive longevity ($RL$).
+
+**Equation 7:** Post-puberty male contriubtion to $\mu_g$ $$ \mu_{gM1} = \mu_c * d_{yM1} * RL $$
+
+Finally, since an autosome will spend roughly half of its time in females and half in males, the mutation rate per generation ($\mu_g$) for a given species is the average of the male and female contributions.
+
+**Equation 8:** $$ \mu_g = \frac{\mu_{gF} + (\mu_{gM0} + \mu_{gM1})}{2} $$
+
+## Estimating mutational parameters from humans
+
+Empirical observations from developmental studies and large-scale pedigree data from humans inform us about some of the underlying mutational parameters of our model (equations 5, 6, and 7). For example, we use $31$ and $34$ as estimates for the number of cell divisions in human females ($d_F$) and males before puberty ($d_{M0}$) [@drost95]. We use $16$ days as the length of a single spermatogenic cycle ($t_sc$) [@heller63], which means we expect $d_{yM1} = 23$ spermatogenic cycles to occur in a year if all spermatagonial cells are constantly dividing (but see below).
+
+The remaining parameter of the model, $\mu_c$, can be estimated from human pedigrees. We confirm the estimate of $\mu_c$ made by Amster and Sella [@amster16] by using the $\mu_{gF}$ observed in Kong et al. [@kong12] of $14.2$, the number of female germline divisions, and rearranging equation 5:
+
+**Equation 9:** $$ \mu_c = \frac{14.2}{31} $$
+```{r mu_c}
+human_dm0 = 34; human_df = 31; human_num_f = 14.2; human_haploid = 2630000000; human_diploid = human_haploid * 2;
+# Observed human mutational parameters
+human_mu_c = (human_num_f / human_df)
+print(paste("mu_c estimated from Kong params: ", human_mu_c))
+human_mu_c = human_mu_c / human_haploid
+print(paste("mu_c per site estimated from Kong params: ", human_mu_c))
+```
+
+We assume this rate is the same between females, males before puberty, and males after puberty (though see Methods of paper for discussion on this point). Therefore, to accomodate the observed $2.01$ mutations per year of the father ($\mu_{yM1}$) [@kong12], we must use the calculated $\mu_c$ to make adjustments to the expected number of spermatogenic cycles. This stems from the observation that not all spermatagonial cells may be constantly dividing [@plant10; @scally16b] (see Methods of paper for full explanation).
+
+**Equation 10:** $$ dy_{M1}^{Human} = \frac{\mu_{yM1}}{\mu_c} \ = \frac{2.01}{0.458} $$ 
+```{r human_spermatogenesis}
+human_sc = 16
+human_dy1 = ((2.01 / human_haploid) / human_mu_c)
+human_sp = human_dy1 / (365/16)
+print(paste("Human expected # of spermatogenic cell divisions/year: ", human_dy1))
+print(paste("Human proportion of cells actively dividing given a cycle length of 16 days: ", human_sp))
+```
+
+It has been observed the New World monkeys have a lower rate of spermatogenesis than humans [@derooij86], with $t_{sc}^{Owl monkey} = 10.2$ days, approximately. We use the expected proportion of cells actively dividing in humans ($p_{sc}^{Human} = 0.19$) to estimate the expected number of spermatogenic cycles per year in owl monkeys.
+
+**Equation 11:** $$ dy_{M1}^{Owl monkey} = (\frac{\mu_{yM1}}{\mu_c}) * p_{sc}^{Human} = \frac{2.01}{0.458} * 0.19 $$ 
+```{r om_spermatogenesis}
+om_sc = 10.2
+om_dy1 = (365/om_sc) * human_sp
+print(paste("Owl monkey expected # of spermatogenic cell divisions/year: ", om_dy1))
+```
+
+## The mutational model fits observed owl monkey data
+
+We can use the mutational parameters estimated from human data above, along with $t_{sc}^{Owl monkey}$ and an age of puberty of $1$ year [@dixson80] to predict mutation rates for a range of paternal ages (dashed purple line). What follows is an exact replication of **Figure 1** in our paper.
+
+```{r fig1, fig.width=6, fig.height=5, fig.align="center"}
+om_puberty = 1
+age_range = seq(om_puberty, 15, by=0.1)
+rep_long = age_range - om_puberty
+# The owl monkey age of puberty set at 1 year and a range of paternal ages
+
+mu_gf = human_mu_c * human_df
+# Equation 5
+
+mu_gm0 = human_mu_c * human_dm0
+# Equation 6
+
+mu_gm1 = human_mu_c * om_dy1 * rep_long
+# Equation 7
+
+mu_g = (mu_gf + (mu_gm0 + mu_gm1)) / 2
+# Equation 8
+
+om_pred = data.frame(mu_g, age_range)
+names(om_pred) = c("Mutation.rate", "Parental.age")
+
+om_pred_reg = lm(mu_g ~ age_range)
+fig1_final = fig1 + geom_line(data=om_pred, aes(x=Parental.age, y=Mutation.rate), linetype=2, size=0.75, color="#b66dff")
+print(fig1_final)
+```
+
+The fit of our model predicts $`r signif(coef(om_pred_reg)[2] * (2 * 2630000000), digits=3)`$ mutations per year of the father after puberty, compared to the observed $2.92$. An F-test on the residuals of the observed fit (solid purple line) and predicted fit (dashed purple line) shows that they are not significantly different.
+
+```{r fig1-ftest}
+cur_mu = mu_calc
+cur_gt = cur_filter$Paternal.GT
+#plot(cur_gt,cur_mu,ylim=c(min(cur_mu),max(cur_mu)))
+
+#abline(om_obs_reg)
+#segments(x0=cur_gt,y0=cur_mu,x1=cur_gt,y1=cur_mu-resid(om_obs_reg))
+
+pred_actual = coef(om_pred_reg)[1] + cur_gt * coef(om_pred_reg)[2]
+pred_resids = cur_mu - pred_actual
+#abline(om_pred_reg, lty=2)
+#segments(x0=cur_gt,y0=cur_mu,x1=cur_gt,y1=cur_mu-pred_resids, lty=2)
+
+# This is the F-test for differences between the two lines in Fig.1
+print(var.test(resid(om_obs_reg), pred_resids, alternative="two.sided"))
+```
+
+## Changing the allelic balance filter has little effect on the fit of the model
+
+By using a less stringent allelic balance filter of [0.3,0.7], we do reduce the false negative rate to $\alpha = 0.29$, however we find that this has little effect on our fit. Though we observe $2.63$ mutations per year of the father, a slightly lower estimate than with the more stringent filter. What follows is an exact replication of **Figure S2**.
+
+```{r figS2, fig.width=6, fig.height=5, fig.align="center"}
+cur_filter = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.3 & Max.AB==0.7)
+# Read data and define current filter
+
+callable_sites = cur_filter$Sites - cur_filter$Uncallable.SNP.sites
+mu_calc = cur_filter$MVs / ((1 - cur_filter$Min.FN) * (2 * callable_sites))
+cur_filter$CpG.rate = cur_filter$CpG.MVs / (2 * callable_sites)
+
+figS2 = ggplot(cur_filter, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN)) + 
+  geom_smooth(method='glm', color='#b66dff', fill="#f2e6ff", fullrange=T) +
+  geom_point(color='#b66dff', size=3) +
+  geom_smooth(aes(x=Paternal.GT, y=CpG.rate), method='glm', color="#6db6ff", fill=NA, fullrange=T) +
+  geom_point(aes(x=Paternal.GT, y=CpG.rate), color="#6db6ff", size=3) +
+  geom_line(data=om_pred, aes(x=Parental.age, y=Mutation.rate), linetype=2, size=0.75, color="#b66dff") +
+  scale_x_continuous(breaks = seq(1, 15, by=2)) + 
+  scale_y_continuous(breaks = seq(0, 1.8e-8, by=0.4e-8)) + 
+  scale_color_manual(breaks=c("All mutations (observed)", "CpG mutations (observed)"), values=c("All mutations        (observed)"='#b66dff', "CpG mutations (observed)"="#6db6ff")) + 
+  geom_vline(xintercept=1, linetype=3, color="grey", size=0.75) + 
+  labs(x="Age of father at conception (y)",y="Mutation rate per site\nper generation") +
+  theme_classic() +
+  theme(axis.text=element_text(size=14), 
+        axis.title=element_text(size=20), 
+        axis.title.y=element_text(margin=margin(t=0,r=20,b=0,l=0),color="black"), 
+        axis.title.x=element_text(margin=margin(t=20,r=0,b=0,l=0),color="black"),
+        axis.line=element_line(colour='#595959',size=0.75),
+        axis.ticks=element_line(colour="#595959",size = 1),
+        axis.ticks.length=unit(0.2,"cm")
+        #legend.position=c(0.1,0.87),
+        #legend.text=element_text(size=18)
+        )
+print(figS2)
+
+om_obs_reg = lm(mu_calc ~ cur_filter$Paternal.GT)
+
+cur_mu = mu_calc
+cur_gt = cur_filter$Paternal.GT
+#plot(cur_gt,cur_mu,ylim=c(min(cur_mu),max(cur_mu)))
+
+#abline(om_obs_reg)
+#segments(x0=cur_gt,y0=cur_mu,x1=cur_gt,y1=cur_mu-resid(om_obs_reg))
+
+pred_actual = coef(om_pred_reg)[1] + cur_gt * coef(om_pred_reg)[2]
+pred_resids = cur_mu - pred_actual
+#abline(om_pred_reg, lty=2)
+#segments(x0=cur_gt,y0=cur_mu,x1=cur_gt,y1=cur_mu-pred_resids, lty=2)
+
+# This is the F-test for differences between the two lines in Fig.1
+print(var.test(resid(om_obs_reg), pred_resids, alternative="two.sided"))
+```
+
+---
+
+# Figure 2
+
+## Primate mutational spectra
+
+Based on the current study in owl monkeys, four studies in humans [@kong12; @goldmann16; @besenbacher16; @rahbari16], and one study in chimpanzees [@venn14], we can compare the mutational spectra across primates. What follows is **Figure 2** from the paper.
+
+```{r fig2, fig.width=8, fig.height=6, fig.align="center", message=FALSE}
+spectra_data = read.csv("spectra.csv", header=TRUE)
+om_spec = data.frame(spectra_data$Mutation, spectra_data$Owl.monkey.CpG.proportion, spectra_data$Owl.monkey.proportion)
+names(om_spec) = c("Type", "CpG", "Non-CpG")
+om_spec_m = melt(om_spec)
+
+fig2_om = ggplot(om_spec_m, aes(Type, value, fill = variable)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_manual("legend", values = c("Non-CpG"="#006ddb","CpG"="#db6d00")) +
+  labs(x="",y="Proportion of mutations") +
+  theme_classic() +
+  theme(axis.text=element_text(size=14), 
+        axis.title.y=element_text(size=14), 
+        axis.line=element_line(colour='#595959',size=0.75),
+        axis.ticks=element_line(colour="#595959",size = 1),
+        axis.ticks.length=unit(0.2,"cm"),
+        legend.title=element_blank(),
+        legend.position=c(0.1,0.87)
+  )
+
+human_spec = data.frame(spectra_data$Mutation, spectra_data$Human.average.proportion)
+names(human_spec) = c("Type", "Human average")
+human_spec_m = melt(human_spec)
+
+fig2_human = ggplot(human_spec_m, aes(Type, value, fill = variable)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_manual("legend", values = c("Human average" = "#920000")) +
+  labs(x="",y="Proportion of mutations") +
+  theme_classic() +
+  theme(axis.text=element_text(size=14), 
+        axis.title.y=element_text(size=14), 
+        axis.line=element_line(colour='#595959',size=0.75),
+        axis.ticks=element_line(colour="#595959",size = 1),
+        axis.ticks.length=unit(0.2,"cm"),
+        legend.position="none"
+  )
+
+ch_spec = data.frame(spectra_data$Mutation, spectra_data$Chimp.proportion)
+names(ch_spec) = c("Type", "Proportion")
+ch_spec_m = melt(ch_spec)
+
+fig2_chimp = ggplot(ch_spec_m, aes(Type, value, fill = variable)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_manual("legend", values = c("Proportion" = "#920000")) +
+  labs(x="",y="") +
+  theme_classic() +
+  theme(axis.text=element_text(size=14), 
+        axis.title.y=element_text(size=14), 
+        axis.line=element_line(colour='#595959',size=0.75),
+        axis.ticks=element_line(colour="#595959",size = 1),
+        axis.ticks.length=unit(0.2,"cm"),
+        legend.position="none"
+  )
+
+g1 = arrangeGrob(fig2_human,fig2_chimp,nrow=1)
+fig2 = plot_grid(fig2_om,g1, nrow=2, rel_heights=c(2, 1))
+print(fig2)
+```
+
+We observe strikingly similar mutational spectra between primates. The only notable difference is a small, but significant increase in the number of A>T mutations in owl monkeys compared to humans. However, once the A>T class is removed, there is no significant difference between these species.
+
+```{r chisq}
+print("--Chi-squared test using all mutation categories--")
+all_chi = chisq.test(spectra_data$Owl.monkey+spectra_data$Owl.monkey.CpG, p=spectra_data$Human.average.proportion)
+print(all_chi)
+print("--Chi-squared test without the A>T category--")
+human_noAT = spectra_data$Human.average.proportion[spectra_data$Mutation!="A>T"]
+human_noAT = human_noAT / sum(human_noAT)
+om_noAT = spectra_data$Owl.monkey[spectra_data$Mutation!="A>T"] + spectra_data$Owl.monkey.CpG[spectra_data$Mutation!="A>T"]
+noAT_chi = chisq.test(om_noAT, p=human_noAT)
+print(noAT_chi)
+```
+
+This means that we see no evidence that the mutational machinery has changed drastically between these species.
+
+---
+
+# Figures 3 and S3
+
+## Modeling mutation functions in primates using human parameters
+
+We then want to know how well the model fits other species with minimal changes to the underlying parameters. We used all parameters estimated from human data above ($d_F$, $d_{M0}$, $d_{yM1}$ $\mu_c$) and varied only the age of puberty ($A_P$) to predict linear mutation functions for owl monkey and chimpanzee. For owl monkey we use $A_P = 1$ year [@dixson80], for chimp we used $A_P = 7.5$ years [@marson91], and for humans we set $A_P = 13.4$ years [@nielsen86]. We then predicted mutation rates based on varying the duration of reproductive longevity by changing the male age of reproduction (lines). We compared these predictions to direct observations of mutation rates from studies done in humans [@kong12; @michaelson12; @besenbacher15; @rahbari16; @wong16; @girard16; @besenbacher16; @jonsson17], chimpanzees [@venn14; @tatsumoto17], and owl monkeys (points). What follows is an exact replication of **Figure 3** from the paper.
+
+```{r fig3, fig.width=10, fig.height=6, fig.align="center", message=FALSE, warning=FALSE}
+human_puberty = 13.4
+human_range = seq(human_puberty, 50.4, by=0.1)
+human_rl = human_range - human_puberty
+
+mu_gf = human_mu_c * human_df
+# Equation 5
+
+mu_gm0 = human_mu_c * human_dm0
+# Equation 6
+
+mu_gm1 = human_mu_c * human_dy1 * human_rl
+# Equation 7
+
+human_mu_g = (mu_gf + (mu_gm0 + mu_gm1)) / 2
+# Equation 8
+
+human_pred = data.frame(human_mu_g, human_range)
+names(human_pred) = c("Mutation.rate", "Parental.age")
+# The human predictions
+#####
+om_puberty = 1
+om_range = seq(om_puberty, 16, by=0.1)
+om_rl = om_range - om_puberty
+
+mu_gf = human_mu_c * human_df
+# Equation 5
+
+mu_gm0 = human_mu_c * human_dm0
+# Equation 6
+
+mu_gm1 = human_mu_c * human_dy1 * om_rl
+# Equation 7
+
+om_mu_g = (mu_gf + (mu_gm0 + mu_gm1)) / 2
+# Equation 8
+
+om_pred = data.frame(om_mu_g, om_range)
+names(om_pred) = c("Mutation.rate", "Parental.age")
+# The owl monkey predictions
+#####
+chimp_puberty = 7.5
+chimp_range = seq(chimp_puberty, 35.5, by=0.1)
+chimp_rl = chimp_range - chimp_puberty
+
+mu_gf = human_mu_c * human_df
+# Equation 5
+
+mu_gm0 = human_mu_c * human_dm0
+# Equation 6
+
+mu_gm1 = human_mu_c * human_dy1 * chimp_rl
+# Equation 7
+
+chimp_mu_g = (mu_gf + (mu_gm0 + mu_gm1)) / 2
+# Equation 8
+
+chimp_pred = data.frame(chimp_mu_g, chimp_range)
+names(chimp_pred) = c("Mutation.rate", "Parental.age")
+# The chimpanzee predictions
+#####
+
+study_data = read.csv("mutation-studies.csv", header=TRUE)
+# Load the study data
+
+fig3 = ggplot(study_data, aes(x=Paternal.age, y=Mutation.rate, color=Species)) +
+    geom_line(data=human_pred, aes(x=Parental.age, y=Mutation.rate), color='#db6d00', size=1) +
+    geom_segment(aes(x=human_puberty,y=human_mu_g[1]-human_mu_g[1]/10,xend=human_puberty,yend=human_mu_g[1]+human_mu_g[1]/10), linetype=1, color="#db6d00", size=0.5) +
+    geom_line(data=om_pred, aes(x=Parental.age, y=Mutation.rate), color='#b66dff', size=1) +
+    geom_segment(aes(x=om_puberty,y=om_mu_g[1]-om_mu_g[1]/10,xend=om_puberty,yend=om_mu_g[1]+om_mu_g[1]/10), linetype=1, color="#b66dff", size=0.5) +
+    geom_line(data=chimp_pred, aes(x=Parental.age, y=Mutation.rate), color='#920000', size=1) +
+    geom_segment(aes(x=chimp_puberty,y=chimp_mu_g[1]-chimp_mu_g[1]/10,xend=chimp_puberty,yend=chimp_mu_g[1]+chimp_mu_g[1]/10), linetype=1, color="#920000", size=0.5) +
+    geom_point(size=3) +
+    scale_x_continuous(limits=c(0,50), breaks = seq(1, 50, by=5)) + 
+    labs(x="Paternal age (y)",y="Mutation rate per site\nper generation") +
+    theme_classic() +
+    guides(colour = guide_legend(override.aes = list(size=3))) +
+    theme(axis.text=element_text(size=14), 
+          axis.title=element_text(size=20), 
+          axis.title.y=element_text(margin=margin(t=0,r=20,b=0,l=0),color="black"), 
+          axis.title.x=element_text(margin=margin(t=20,r=0,b=0,l=0),color="black"),
+          axis.line=element_line(colour='#595959',size=0.75),
+          axis.ticks=element_line(colour="#595959",size = 1),
+          axis.ticks.length=unit(0.2,"cm"),
+          legend.title=element_blank(),
+          legend.position=c(0.13,0.87),
+          legend.text=element_text(size=18)
+    ) +
+    scale_color_manual(breaks=c("Owl monkey", "Chimpanzee", "Human"), values=c("Human"='#db6d00',"Owl monkey"='#b66dff',"Chimpanzee"='#920000'))
+
+print(fig3)
+```
+
+Astoundingly, our predictions with this simple model of reproductive longevity (lines) fit the observed data extremely well (points). In fact, for the human data, the prediction is not significantly different than the best fit line to the study data.
+
+```{r fig3-ftest}
+# This is the F-test for differences between the predicted and observed human lines in Fig.3
+human_data = data.frame(study_data$Paternal.age[study_data$Species=="Human"], study_data$Mutation.rate[study_data$Species=="Human"])
+names(human_data) = c("Age","Mu")
+human_data = na.omit(human_data)
+
+human_study_reg = lm(human_data$Mu ~ human_data$Age)
+human_pred_reg = lm(human_pred$Mutation.rate ~ human_pred$Parental.age)
+
+pred_actual = coef(human_pred_reg)[1] + human_data$Age * coef(human_pred_reg)[2]
+pred_resids = human_data$Mu - pred_actual
+#plot(human_pred$Parental.age,human_pred$Mutation.rate, type='l',ylim=c(0.8e-8,1.8e-8), xlim=c(13.4,50))
+#points(human_data$Age, human_data$Mu)
+#segments(x0=human_data$Age,y0=human_data$Mu,x1=human_data$Age,y1=human_data$Mu-pred_resids)
+#abline(human_study_reg, lty=2)
+#segments(x0=human_data$Age,y0=human_data$Mu,x1=human_data$Age,y1=human_data$Mu-resid(human_study_reg),lty=2)
+print(var.test(resid(human_study_reg), pred_resids, alternative="two.sided"))
+```
+
+## Using species specific rates of spermatogenesis does not affect the fit of our model
+
+Like we did in Figure 1, we can adjust the slope of the line ($d_{yM1}$) by using species specific rates of spermatogenesis ($t_{sc}$). We've previously calculated this for humans and owl monkeys. For chimpanzees, we use set $t_{sc} = 14$ days [@smithwick96].
+
+```{r chimp_sc}
+chimp_sc = 14
+chimp_dy1 = (365/chimp_sc) * human_sp
+print(paste("Chimpanzee expected # of spermatogenic cell divisions/year: ", chimp_dy1))
+```
+
+And adjusting these slopes results in no significant change from the fit of our model. What follows is an exact replication of **Figure S3** in our paper.
+
+```{r figS3, fig.width=10, fig.height=6, fig.align="center", message=FALSE, warning=FALSE}
+#####
+om_puberty = 1
+om_range = seq(om_puberty, 16, by=0.1)
+om_rl = om_range - om_puberty
+
+mu_gf = human_mu_c * human_df
+# Equation 5
+
+mu_gm0 = human_mu_c * human_dm0
+# Equation 6
+
+mu_gm1 = human_mu_c * om_dy1 * om_rl
+# Equation 7
+
+om_mu_g = (mu_gf + (mu_gm0 + mu_gm1)) / 2
+# Equation 8
+
+om_pred = data.frame(om_mu_g, om_range)
+names(om_pred) = c("Mutation.rate", "Parental.age")
+# The owl monkey predictions
+#####
+chimp_puberty = 7.5
+chimp_range = seq(chimp_puberty, 35.5, by=0.1)
+chimp_rl = chimp_range - chimp_puberty
+
+mu_gf = human_mu_c * human_df
+# Equation 5
+
+mu_gm0 = human_mu_c * human_dm0
+# Equation 6
+
+mu_gm1 = human_mu_c * chimp_dy1 * chimp_rl
+# Equation 7
+
+chimp_mu_g = (mu_gf + (mu_gm0 + mu_gm1)) / 2
+# Equation 8
+
+chimp_pred = data.frame(chimp_mu_g, chimp_range)
+names(chimp_pred) = c("Mutation.rate", "Parental.age")
+# The chimpanzee predictions
+#####
+
+study_data = read.csv("mutation-studies.csv", header=TRUE)
+# Load the study data
+
+figS3 = ggplot(study_data, aes(x=Paternal.age, y=Mutation.rate, color=Species)) +
+    geom_line(data=human_pred, aes(x=Parental.age, y=Mutation.rate), color='#db6d00', size=1) +
+    geom_segment(aes(x=human_puberty,y=human_mu_g[1]-human_mu_g[1]/10,xend=human_puberty,yend=human_mu_g[1]+human_mu_g[1]/10), linetype=1, color="#db6d00", size=0.5) +
+    geom_line(data=om_pred, aes(x=Parental.age, y=Mutation.rate), color='#b66dff', size=1) +
+    geom_segment(aes(x=om_puberty,y=om_mu_g[1]-om_mu_g[1]/10,xend=om_puberty,yend=om_mu_g[1]+om_mu_g[1]/10), linetype=1, color="#b66dff", size=0.5) +
+    geom_line(data=chimp_pred, aes(x=Parental.age, y=Mutation.rate), color='#920000', size=1) +
+    geom_segment(aes(x=chimp_puberty,y=chimp_mu_g[1]-chimp_mu_g[1]/10,xend=chimp_puberty,yend=chimp_mu_g[1]+chimp_mu_g[1]/10), linetype=1, color="#920000", size=0.5) +
+    geom_point(size=3) +
+    scale_x_continuous(limits=c(0,50), breaks = seq(1, 50, by=5)) + 
+    labs(x="Paternal age (y)",y="Mutation rate per site\nper generation") +
+    theme_classic() +
+    guides(colour = guide_legend(override.aes = list(size=3))) +
+    theme(axis.text=element_text(size=14), 
+          axis.title=element_text(size=20), 
+          axis.title.y=element_text(margin=margin(t=0,r=20,b=0,l=0),color="black"), 
+          axis.title.x=element_text(margin=margin(t=20,r=0,b=0,l=0),color="black"),
+          axis.line=element_line(colour='#595959',size=0.75),
+          axis.ticks=element_line(colour="#595959",size = 1),
+          axis.ticks.length=unit(0.2,"cm"),
+          legend.title=element_blank(),
+          legend.position=c(0.13,0.87),
+          legend.text=element_text(size=18)
+    ) +
+    scale_color_manual(breaks=c("Owl monkey", "Chimpanzee", "Human"), values=c("Human"='#db6d00',"Owl monkey"='#b66dff',"Chimpanzee"='#920000'))
+
+print(figS3)
+
+# This is the F-test for differences between the predicted and observed human lines in Fig.3
+human_data = data.frame(study_data$Paternal.age[study_data$Species=="Human"], study_data$Mutation.rate[study_data$Species=="Human"])
+names(human_data) = c("Age","Mu")
+human_data = na.omit(human_data)
+
+human_study_reg = lm(human_data$Mu ~ human_data$Age)
+human_pred_reg = lm(human_pred$Mutation.rate ~ human_pred$Parental.age)
+
+pred_actual = coef(human_pred_reg)[1] + human_data$Age * coef(human_pred_reg)[2]
+pred_resids = human_data$Mu - pred_actual
+#plot(human_pred$Parental.age,human_pred$Mutation.rate, type='l',ylim=c(0.8e-8,1.8e-8), xlim=c(13.4,50))
+#points(human_data$Age, human_data$Mu)
+#segments(x0=human_data$Age,y0=human_data$Mu,x1=human_data$Age,y1=human_data$Mu-pred_resids)
+#abline(human_study_reg, lty=2)
+#segments(x0=human_data$Age,y0=human_data$Mu,x1=human_data$Age,y1=human_data$Mu-resid(human_study_reg),lty=2)
+print(var.test(resid(human_study_reg), pred_resids, alternative="two.sided"))
+```
+
+---
+
+# References

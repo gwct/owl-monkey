@@ -1,0 +1,17 @@
+Species,Author,Year,Num families,Paternal age,Maternal age,Avg parental age,Num mutations,Haploid genome,Mutation rate,Slope,Notes
+Human,Conrad,2011,2,NA,NA,NA,NA,NA,2.05E-08,NA,Mutation rate is rough average
+Human,Kong,2012,68,29.7,29.7,29.7,63.2,2630000000,1.20E-08,2.01,
+Human,Francioli,2015,250,NA,NA,NA,44.08,NA,NA,1.5,They say 1 to 2 mutations per year of father
+Human,Michaelson,2012,10,31,NA,31,58,NA,1.00E-08,1.02,Paternal age is rough average; no maternal ages reported
+Human,Besenbacher,2015,10,28.4,NA,28.4,73,NA,1.27E-08,2,
+Human,Rahbari,2016,3,29.62,29.92,29.77,64,NA,1.28E-08,2.87,
+Human,Goldmann,2016,816,NA,NA,NA,45,NA,NA,0.91,
+Human,Wong,2016,719,33.4,31.2,32.3,38.87,1620000000,1.05E-08,0.51,
+Human,Girard,2016,10,22.5,22,22.25,NA,2788600000,1.00E-08,NA,Younger fathers
+Human,Girard,2016,10,43.5,33,38.25,NA,2782200000,1.74E-08,NA,Older fathers
+Human,Besenbacher,2016,283,31.6,28.9,30.25,63,2450000000,1.29E-08,1.7,
+Human,Jonsson,2017,1548,30.1,30.1,30.1,70.3,2682890000,1.29E-08,1.51,Average ages estimated from data by authors
+Human,Jonsson,2017,251,NA,NA,NA,NA,NA,NA,1.57,
+Chimpanzee,Venn,2014,1,24.3,26.3,25.3,69,2360000000,1.20E-08,3.02,Ages and num mutations extracted to wild population numbers
+Chimpanzee,Tatsumoto,2017,1,24,24,24,45,1182000000,1.48E-08,NA,
+Owl monkey,Thomas,2018,14,6.64,6.53,6.585,35.95,2207614768,8.14E-09,3.48,
