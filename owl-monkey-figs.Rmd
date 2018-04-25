@@ -16,9 +16,10 @@ library(knitr)
 library(reshape2)
 library(gridExtra)
 library(cowplot)
+library(kableExtra)
 ```
 
-This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation ($\mu_g$) for this species. We also found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn't seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in $\mu_g$ between these species can be explained by the varying age of puberty and average age at reproduction. For full descriptions see the paper: [doi]
+This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation ($\mu_g$) for this species. We found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn't seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in $\mu_g$ between these species can be explained by the varying age of puberty and average age at reproduction. For full descriptions see the paper: [doi]
 
 To download this document, all accompanying code, and the data visit the following link: [github repo]
 
@@ -30,12 +31,12 @@ To download this document, all accompanying code, and the data visit the followi
 
 After filtering putative mutations (see Methods in paper) in the 14 owl monkey trios, we can calculate mutation rates ($\mu_g$) by taking into account false negative rates ($\alpha$) and the length of the callable genome ($C$) for each trio. Estimating a false negative rate allows us to correct the mutation rate for any true mutations that may have been removed by our filtering process. By using the distribution of allelic balance at all heterozygous SNP sites as an empirical CDF, we estimate $\alpha = 0.44$ while removing mutations with allelic balance less than 0.4 or or greater than 0.6 (henceforth noted as [0.4,0.6]; see FigS1 and Methods in paper). We estimate $C$ for each trio by counting the number of sites that pass the MV filters in each trio. Then, with the detected number of de novo mutations after filtering ($m_g$), the mutation rate for each trio is calculated as follows:
 
-Equation 1: $$ \mu_g = \frac{m_g}{(1 - \alpha)*(2 * C)} $$
+**Equation 1:** $$ \mu_g = \frac{m_g}{(1 - \alpha)*(2 * C)} $$
 
-Mutation rates for all 14 trios were calculated in this fashion, with allelic balance cut-offs of [0.4,0.6] and the calculated value for $\alpha$:
+Mutation rates for all 14 trios were calculated in this fashion, with allelic balance cut-offs of [0.4,0.6] and the calculated value for $\alpha$. This information is available in **Table S3** of our paper.
 
 ```{r table1}
-in_data = read.csv("owl-monkey-sites.csv", header=TRUE)
+in_data = read.csv("owl-monkey-filters.csv", header=TRUE)
 cur_filter = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.4 & Max.AB==0.6)
 # Read data and define current filter
 
@@ -43,13 +44,14 @@ callable_sites = cur_filter$Sites - cur_filter$Uncallable.SNP.sites
 mu_calc = cur_filter$MVs / ((1 - cur_filter$Min.FN) * (2 * callable_sites))
 cur_filter$CpG.rate = cur_filter$CpG.MVs / (2 * callable_sites)
 mu_table = data.frame(cur_filter$Trio, cur_filter$MVs, cur_filter$CpG.MVs, callable_sites, mu_calc)
-names(mu_table) = c("Trio", "Mutations", "Mutations at CpG sites", "Callable sites", "Mutation rate")
+names(mu_table) = c("Trio", "Mutations", "CpG Mutations", "Callable sites", "Mutation rate")
 # Re-calculate the mutation rate for posterity and subset the data for the table.
 
-kable(mu_table, caption="Table 1: Mutation rates for 14 owl monkey trios", digits=11)
+kable(mu_table, "html", caption="Table 1: Mutation rates for 14 owl monkey trios", digits=11, align=rep('c', 5)) %>%
+  kable_styling(bootstrap_options="striped", full_width=F)
 ```
 
-We want to know if these mutation rates are correlated with father's age, which would be similar to the paternal-age effect seen in humans. To answer this question, we perform a simple linear regression on mutation rates with father's age at birth of the offspring ($A_M$; purple dots and line). Additionally, we perform a similar analysis on non-replicative mutations and CpG sites (blue dots and line).
+We want to know if these mutation rates are correlated with father's age, similar to the paternal-age effect seen in humans. To answer this question, we perform a simple linear regression on mutation rates with father's age at birth of the offspring ($A_M$; purple dots and line). Additionally, we perform a similar analysis on non-replicative mutations and CpG sites (blue dots and line).
 
 ```{r regression, fig.width=6, fig.height=5, fig.align="center"}
 om_obs_reg = lm(mu_calc ~ cur_filter$Paternal.GT)
@@ -79,13 +81,13 @@ print(fig1)
 
 This results in the following formula for a best fit line (purple):
 
-Equation 2: $$ \mu_g = 3.74\text{e-}9 + (A_M * 6.62\text{e-}10) $$
+**Equation 2:** $$ \mu_g = 3.74\text{e-}9 + (A_M * 6.62\text{e-}10) $$
 
 This means that with an average genome size of $2.21$ billion base pairs that $`r signif((coef(om_obs_reg)[1] + (1 * coef(om_obs_reg)[2])) * (2 * mean(callable_sites)), digits=4)`$  mutations are accounted for by puberty at the age of 1, with an additional $`r signif(coef(om_obs_reg)[2] * (2 * mean(callable_sites)), digits=3)`$ mutations per year of the father's life after puberty. As expected, non-replicative mutations are independent of father's age (blue line).
 
 ## Modeling mutation rates
 
-Large-scale pedigree sequencing projects in humans [@kong12; @michaelson12; @besenbacher15; @francioli15; @besenbacher16; @girard16; @goldmann16; @rahbari16; @wong16; @jonsson17] have shown the importance of different life-stages in the determination of mutation rates. Models for predicting mutation rates generally account for the three important life stages in the mammalian germline [@segurel14; @thomas14;]. These life stages are (1) female (F), (2) male before puberty (M0), (3) and male after puberty (M1).  The relative contribution of each of these stages must be accounted for when estimating mutation rates per generation [@thomas14] or per year [@segurel14; @thomas14; @amster16]. Here, we re-frame this model in terms of reproductive longevity. Reproductive longevity depends on both the age of puberty in males ($P_M$) and the age of the father at conception of his offspring ($A_M$) and we find that it is the main determinant of mutation rate variation in primates. We define the value of reproductive longevity ($RL$) as:
+Large-scale pedigree sequencing projects in humans [@kong12; @michaelson12; @besenbacher15; @francioli15; @besenbacher16; @girard16; @goldmann16; @rahbari16; @wong16; @jonsson17] have shown the importance of different life-stages in the determination of mutation rates. Models for predicting mutation rates generally account for the three important life stages in the mammalian germline [@segurel14; @thomas14]. These life stages are (1) female (F), (2) male before puberty (M0), (3) and male after puberty (M1).  The relative contribution of each of these stages must be accounted for when estimating mutation rates per generation [@thomas14] or per year [@segurel14; @thomas14; @amster16]. Here, we re-frame this model in terms of reproductive longevity. Reproductive longevity depends on both the age of puberty in males ($P_M$) and the age of the male at conception of his offspring ($A_M$) and we find that it is the main determinant of mutation rate variation in primates. We define the value of reproductive longevity ($RL$) as:
 
 **Equation 3:** $$ RL = (A_M - P_M) $$
 
@@ -110,13 +112,13 @@ Finally, since an autosome will spend roughly half of its time in females and ha
 
 ## Estimating mutational parameters from humans
 
-Empirical observations from developmental studies and large-scale pedigree data from humans inform us about some of the underlying mutational parameters of our model (equations 5, 6, and 7). For example, we use $31$ and $34$ as estimates for the number of cell divisions in human females ($d_F$) and males before puberty ($d_{M0}$) [@drost95]. We use $16$ days as the length of a single spermatogenic cycle ($t_sc$) [@heller63], which means we expect $d_{yM1} = 23$ spermatogenic cycles to occur in a year if all spermatagonial cells are constantly dividing (but see below).
+Empirical observations from developmental studies and large-scale pedigree data from humans inform us about some of the underlying mutational parameters of our model (equations 5, 6, and 7). For example, we use $31$ and $34$ as estimates for the number of cell divisions in human females ($d_F$) and males before puberty ($d_{M0}$) [@drost95]. We use $16$ days as the length of a single spermatogenic cycle ($t_{sc}$) [@heller63], which means we expect $d_{yM1} = 23$ spermatogenic cycles to occur in a year if all spermatagonial cells are constantly dividing (but see below).
 
 The remaining parameter of the model, $\mu_c$, can be estimated from human pedigrees. We confirm the estimate of $\mu_c$ made by Amster and Sella [@amster16] by using the $\mu_{gF}$ observed in Kong et al. [@kong12] of $14.2$, the number of female germline divisions, and rearranging equation 5:
 
 **Equation 9:** $$ \mu_c = \frac{14.2}{31} $$
 ```{r mu_c}
-human_dm0 = 34; human_df = 31; human_num_f = 14.2; human_haploid = 2630000000; human_diploid = human_haploid * 2;
+human_dm0 = 34; human_df = 31; human_num_f = 14.2; human_haploid = 2630000000;
 # Observed human mutational parameters
 human_mu_c = (human_num_f / human_df)
 print(paste("mu_c estimated from Kong params: ", human_mu_c))
@@ -198,14 +200,14 @@ print(var.test(resid(om_obs_reg), pred_resids, alternative="two.sided"))
 By using a less stringent allelic balance filter of [0.3,0.7], we do reduce the false negative rate to $\alpha = 0.29$, however we find that this has little effect on our fit. Though we observe $2.63$ mutations per year of the father, a slightly lower estimate than with the more stringent filter. What follows is an exact replication of **Figure S2**.
 
 ```{r figS2, fig.width=6, fig.height=5, fig.align="center"}
-cur_filter = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.3 & Max.AB==0.7)
+cur_filter_s2 = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.3 & Max.AB==0.7)
 # Read data and define current filter
 
-callable_sites = cur_filter$Sites - cur_filter$Uncallable.SNP.sites
-mu_calc = cur_filter$MVs / ((1 - cur_filter$Min.FN) * (2 * callable_sites))
-cur_filter$CpG.rate = cur_filter$CpG.MVs / (2 * callable_sites)
+callable_sites_s2 = cur_filter_s2$Sites - cur_filter_s2$Uncallable.SNP.sites
+mu_calc_s2 = cur_filter$MVs / ((1 - cur_filter_s2$Min.FN) * (2 * callable_sites_s2))
+cur_filter_s2$CpG.rate = cur_filter_s2$CpG.MVs / (2 * callable_sites_s2)
 
-figS2 = ggplot(cur_filter, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN)) + 
+figS2 = ggplot(cur_filter_s2, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN)) + 
   geom_smooth(method='glm', color='#b66dff', fill="#f2e6ff", fullrange=T) +
   geom_point(color='#b66dff', size=3) +
   geom_smooth(aes(x=Paternal.GT, y=CpG.rate), method='glm', color="#6db6ff", fill=NA, fullrange=T) +
@@ -229,10 +231,10 @@ figS2 = ggplot(cur_filter, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN))
         )
 print(figS2)
 
-om_obs_reg = lm(mu_calc ~ cur_filter$Paternal.GT)
+om_obs_reg = lm(mu_calc_s2 ~ cur_filter_s2$Paternal.GT)
 
-cur_mu = mu_calc
-cur_gt = cur_filter$Paternal.GT
+cur_mu = mu_calc_s2
+cur_gt = cur_filter_s2$Paternal.GT
 #plot(cur_gt,cur_mu,ylim=c(min(cur_mu),max(cur_mu)))
 
 #abline(om_obs_reg)
@@ -256,7 +258,7 @@ print(var.test(resid(om_obs_reg), pred_resids, alternative="two.sided"))
 Based on the current study in owl monkeys, four studies in humans [@kong12; @goldmann16; @besenbacher16; @rahbari16], and one study in chimpanzees [@venn14], we can compare the mutational spectra across primates. What follows is **Figure 2** from the paper.
 
 ```{r fig2, fig.width=8, fig.height=6, fig.align="center", message=FALSE}
-spectra_data = read.csv("spectra.csv", header=TRUE)
+spectra_data = read.csv("mutational-spectra.csv", header=TRUE)
 om_spec = data.frame(spectra_data$Mutation, spectra_data$Owl.monkey.CpG.proportion, spectra_data$Owl.monkey.proportion)
 names(om_spec) = c("Type", "CpG", "Non-CpG")
 om_spec_m = melt(om_spec)
@@ -264,6 +266,7 @@ om_spec_m = melt(om_spec)
 fig2_om = ggplot(om_spec_m, aes(Type, value, fill = variable)) + 
   geom_bar(stat = "identity") +
   scale_fill_manual("legend", values = c("Non-CpG"="#006ddb","CpG"="#db6d00")) +
+  ggtitle("Owl monkey") + 
   labs(x="",y="Proportion of mutations") +
   theme_classic() +
   theme(axis.text=element_text(size=14), 
@@ -282,6 +285,7 @@ human_spec_m = melt(human_spec)
 fig2_human = ggplot(human_spec_m, aes(Type, value, fill = variable)) + 
   geom_bar(stat = "identity") +
   scale_fill_manual("legend", values = c("Human average" = "#920000")) +
+  ggtitle("Human") + 
   labs(x="",y="Proportion of mutations") +
   theme_classic() +
   theme(axis.text=element_text(size=14), 
@@ -299,6 +303,7 @@ ch_spec_m = melt(ch_spec)
 fig2_chimp = ggplot(ch_spec_m, aes(Type, value, fill = variable)) + 
   geom_bar(stat = "identity") +
   scale_fill_manual("legend", values = c("Proportion" = "#920000")) +
+  ggtitle("Chimpanzee") + 
   labs(x="",y="") +
   theme_classic() +
   theme(axis.text=element_text(size=14), 
@@ -314,7 +319,7 @@ fig2 = plot_grid(fig2_om,g1, nrow=2, rel_heights=c(2, 1))
 print(fig2)
 ```
 
-We observe strikingly similar mutational spectra between primates. The only notable difference is a small, but significant increase in the number of A>T mutations in owl monkeys compared to humans. However, once the A>T class is removed, there is no significant difference between these species.
+We observe strikingly similar mutational spectra between primates. The only notable difference is a small, but significant increase in the number of A>T mutations in owl monkeys compared to humans. However, once the A>T class is removed, there is no significant difference between these species. This means that we see no evidence that the mutational machinery has changed drastically between these species.
 
 ```{r chisq}
 print("--Chi-squared test using all mutation categories--")
@@ -328,15 +333,13 @@ noAT_chi = chisq.test(om_noAT, p=human_noAT)
 print(noAT_chi)
 ```
 
-This means that we see no evidence that the mutational machinery has changed drastically between these species.
-
 ---
 
 # Figures 3 and S3
 
 ## Modeling mutation functions in primates using human parameters
 
-We then want to know how well the model fits other species with minimal changes to the underlying parameters. We used all parameters estimated from human data above ($d_F$, $d_{M0}$, $d_{yM1}$ $\mu_c$) and varied only the age of puberty ($A_P$) to predict linear mutation functions for owl monkey and chimpanzee. For owl monkey we use $A_P = 1$ year [@dixson80], for chimp we used $A_P = 7.5$ years [@marson91], and for humans we set $A_P = 13.4$ years [@nielsen86]. We then predicted mutation rates based on varying the duration of reproductive longevity by changing the male age of reproduction (lines). We compared these predictions to direct observations of mutation rates from studies done in humans [@kong12; @michaelson12; @besenbacher15; @rahbari16; @wong16; @girard16; @besenbacher16; @jonsson17], chimpanzees [@venn14; @tatsumoto17], and owl monkeys (points). What follows is an exact replication of **Figure 3** from the paper.
+We then wanted to know how well the model fits other species with minimal changes to the underlying parameters. We used all parameters estimated from human data above ($d_F$, $d_{M0}$, $d_{yM1}$ $\mu_c$) and varied only the age of puberty ($P_M$) to predict linear mutation functions for owl monkey and chimpanzee. For owl monkey we use $P_M = 1$ year [@dixson80], for chimp we used $P_M = 7.5$ years [@marson91], and for humans we set $P_M = 13.4$ years [@nielsen86]. We then predicted mutation rates based on varying the duration of reproductive longevity by changing the male age of reproduction (lines). We compared these predictions to direct observations of mutation rates from studies done in humans [@kong12; @michaelson12; @besenbacher15; @rahbari16; @wong16; @girard16; @besenbacher16; @jonsson17], chimpanzees [@venn14; @tatsumoto17], and owl monkeys (points). What follows is an exact replication of **Figure 3** from the paper.
 
 ```{r fig3, fig.width=10, fig.height=6, fig.align="center", message=FALSE, warning=FALSE}
 human_puberty = 13.4
@@ -554,6 +557,82 @@ pred_resids = human_data$Mu - pred_actual
 #segments(x0=human_data$Age,y0=human_data$Mu,x1=human_data$Age,y1=human_data$Mu-resid(human_study_reg),lty=2)
 print(var.test(resid(human_study_reg), pred_resids, alternative="two.sided"))
 ```
+
+---
+
+# Appendix: Table of parameter definitions
+
+```{r table2}
+in_data = read.csv("owl-monkey-filters.csv", header=TRUE)
+cur_filter = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.4 & Max.AB==0.6)
+# Read data and define current filter
+
+symbols = c(
+  "$\\mu_g$",
+  "$\\alpha$", 
+  "$C$", 
+  "$m_g$", 
+  "$A_M$", 
+  "$P_M$",
+  "$RL$",
+  "$\\mu_{gF}$",
+  "$d_F$",
+  "$\\mu_{gM0}$",
+  "$d_{M0}$",
+  "$d_{yM1}$",
+  "$\\mu_c$",
+  "$t_{sc}$",
+  "$\\mu_{yM1}$",
+  "$p_{sc}$"
+  )
+
+defs = c(
+  "Mutation rate per site per generation", 
+  "False negative rate", 
+  "Callable sites", 
+  "# of mutations per generation", 
+  "Age of male at birth of offspring", 
+  "Age of male at puberty (years)", 
+  "Reproductive longevity",
+  "Mutation rate per site per generation in females",
+  "Number of cell divisions in females",
+  "Mutation rate per site per generation in males before puberty",
+  "Number of cell divisions in males before puberty",
+  "Number of cell divisions per year in males after puberty",
+  "Mutation rate per site per cell division",
+  "Spermatogenic cycle length (days)",
+  "Mutation rate per site per year in males after puberty",
+  "Proportion of spermatagonial cells actively dividing"
+  )
+
+ests = c(
+  paste("Owl monkey: ", signif(mean(mu_calc), digits=3)), 
+  signif(cur_filter$Min.FN[1], digits=3), 
+  paste("Owl monkey average: ", floor(mean(callable_sites))), 
+  paste("Owl monkey average: ", floor(mean(cur_filter$MVs))), 
+  "NA", 
+  "Owl monkey: 1 [@dixson80], Human: 13.4 [@nielsen86], Chimpanzees: 7.5 [@marson91]", 
+  "NA",
+  paste("Human: ", signif(human_num_f/human_haploid, digits=3), "[@kong12]"),
+  paste("Human: ", human_df, "([@drost95])"),
+  paste("Human: ", signif(human_mu_c * human_dm0, digits=3)),
+  paste("Human: ", human_dm0, "([@drost95])"),
+  paste("Owl monkey: ", signif(om_dy1, digits=3), ", Human: ", signif(human_dy1, digits=3), ", Chimpanzee: ", signif(chimp_dy1, digits=3)),
+  signif(human_mu_c, digits=3),
+  paste("Owl monkey: ", om_sc, "[@derooij86], Human: ", human_sc, "[@heller63], Chimpanzee: ", chimp_sc, "[@smithwick96]"),
+  paste("Owl monkey: ", signif(coef(om_pred_reg)[2], digits=3)),
+  paste("Human: ", signif(human_sp, digits=3))
+  )
+
+param_table = data.frame(symbols, defs, ests)
+names(param_table) = c("Symbol", "Definition", "Estimate")
+# Re-calculate the mutation rate for posterity and subset the data for the table.
+
+
+kable(param_table, "html", caption="Table 2: Parameter symbols, definitions, and estimates", digits=11) %>%
+  kable_styling(bootstrap_options="striped", full_width=F)
+```
+
 
 ---
 
