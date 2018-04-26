@@ -145,7 +145,7 @@ $(document).ready(function () {
 <h3>Introduction to this document</h3>
 <p>This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey (<em>Aotus nancymaae</em>) individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation (<span class="math inline">\(\mu_g\)</span>) for this species. We found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn’t seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in <span class="math inline">\(\mu_g\)</span> between these species can be explained by the varying age of puberty and average age at reproduction.</p>
 <p>For full descriptions see the paper: [doi]</p>
-<p>To download this document, all accompanying code, and the data visit the following link: [github repo]</p>
+<p>To download this document, all accompanying code, and the data visit the following link: <a href="https://github.com/gwct/owl-monkey">Owl monkey github repository</a></p>
 <hr />
 </div>
 <div id="figures-1-and-s2" class="section level3">
@@ -993,7 +993,7 @@ defs = c(
 
 ests = c(
   paste(&quot;Owl monkey: &quot;, signif(mean(mu_calc), digits=3)), 
-  paste(&quot;Owl monkey with alleic balance cut-offs [0.4,0.6]: &quot;, signif(cur_filter$Min.FN[1], digits=3)), 
+  paste(&quot;Owl monkey with allelic balance cut-offs [0.4,0.6]: &quot;, signif(cur_filter$Min.FN[1], digits=3)), 
   paste(&quot;Owl monkey average: &quot;, floor(mean(callable_sites))), 
   paste(&quot;Owl monkey average: &quot;, floor(mean(cur_filter$MVs))), 
   &quot;NA&quot;, 
@@ -1054,7 +1054,7 @@ Owl monkey: 8.14e-09
 False negative rate
 </td>
 <td style="text-align:left;">
-Owl monkey with alleic balance cut-offs [0.4,0.6]: 0.438
+Owl monkey with allelic balance cut-offs [0.4,0.6]: 0.438
 </td>
 </tr>
 <tr>

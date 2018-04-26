@@ -24,9 +24,9 @@ library(kableExtra)
 
 This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey (*Aotus nancymaae*) individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation ($\mu_g$) for this species. We found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn't seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in $\mu_g$ between these species can be explained by the varying age of puberty and average age at reproduction.
 
-For full descriptions see the paper: [doi]
+For full descriptions see the paper: [citation and doi forthcoming]
 
-To download this document, all accompanying code, and the data visit the following link: [github repo]
+To download this document, all accompanying code, and the data visit the following link: [Owl monkey github repository](https://github.com/gwct/owl-monkey)
 
 ---
 
