@@ -22,7 +22,7 @@ library(kableExtra)
 
 ### Introduction to this document
 
-This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation ($\mu_g$) for this species. We found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn't seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in $\mu_g$ between these species can be explained by the varying age of puberty and average age at reproduction.
+This document is a brief walkthrough of the methods and code used to generate the figures in our owl monkey pedigree sequencing paper. In this paper, we sequenced 30 owl monkey (*Aotus nancymaae*) individuals within 6 multi-generation pedigrees (14 trios) and calculated the mutation rate per generation ($\mu_g$) for this species. We found that there is a similar paternal age effect in owl monkeys as in humans, and that the underlying mutational machinery doesn't seem to have changed much between owl monkeys, chimpanzees, and humans. Finally, we utilized a simple model of reproductive longevity to show that any observed variation in $\mu_g$ between these species can be explained by the varying age of puberty and average age at reproduction.
 
 For full descriptions see the paper: [doi]
 
@@ -144,7 +144,7 @@ print(paste("Human proportion of cells actively dividing given a cycle length of
 
 It has been observed the New World monkeys have a lower rate of spermatogenesis than humans [@derooij86], with $t_{sc}^{Owl monkey} = 10.2$ days, approximately. We use the expected proportion of cells actively dividing in humans ($p_{sc}^{Human} = 0.19$) to estimate the expected number of spermatogenic cycles per year in owl monkeys.
 
-**Equation 11:** $$ dy_{M1}^{Owl monkey} = (\frac{\mu_{yM1}}{\mu_c}) * p_{sc}^{Human} = \frac{2.01}{0.458} * 0.19 $$ 
+**Equation 11:** $$ dy_{M1}^{Owl monkey} = (\frac{365}{t_{sc}^{Owl monkey}}) * p_{sc}^{Human} $$ 
 ```{r om_spermatogenesis}
 om_sc = 10.2
 om_dy1 = (365/om_sc) * human_sp
@@ -612,7 +612,7 @@ defs = c(
 
 ests = c(
   paste("Owl monkey: ", signif(mean(mu_calc), digits=3)), 
-  signif(cur_filter$Min.FN[1], digits=3), 
+  paste("Owl monkey with allelic balance cut-offs [0.4,0.6]: ", signif(cur_filter$Min.FN[1], digits=3)), 
   paste("Owl monkey average: ", floor(mean(callable_sites))), 
   paste("Owl monkey average: ", floor(mean(cur_filter$MVs))), 
   "NA", 
