@@ -113,7 +113,7 @@ cat("----------\n")
 
 ####################
 # Read the study data
-study_data = read.csv("mutation-studies.csv", header=TRUE)
+study_data = read.csv("data/mutation-studies.csv", header=TRUE)
 ####################
 
 ####################

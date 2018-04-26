@@ -63,7 +63,7 @@ cat("----------\n")
 
 ####################
 ## Owl monkey observed data (purple solid)
-in_data = read.csv("owl-monkey-filters.csv", header=TRUE)
+in_data = read.csv("data/owl-monkey-filters.csv", header=TRUE)
 
 if(figs2_opt) {
   cur_filter = subset(in_data, Min.DP==20 & Max.DP==60 & Min.AB==0.3 & Max.AB==0.7)

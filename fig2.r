@@ -15,7 +15,7 @@ setwd(this.dir)
 
 ####################
 ## Read the input data
-in_data = read.csv("mutational-spectra.csv", header=TRUE)
+in_data = read.csv("data/mutational-spectra.csv", header=TRUE)
 ####################
 
 ####################
