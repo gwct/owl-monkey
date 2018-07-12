@@ -11,7 +11,7 @@ this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 cat("----------\n")
 
-figs2_opt = FALSE
+figs2_opt = F
 # CHANGE TO TRUE TO GENERATE FIG. S2
 
 ####################
@@ -55,9 +55,9 @@ rep_long = age_range - om_puberty
 om_mu_g = ((human_df * human_mu_c) + ((human_dm0 * human_mu_c) + (om_dy1 * rep_long * human_mu_c))) / 2
 # Calculating the mutation rate (Equation 9 in paper)
 
-om_pred = data.frame(mu_g, age_range)
+om_pred = data.frame(om_mu_g, age_range)
 names(om_pred) = c("Mutation.rate", "Parental.age")
-om_pred_reg = lm(mu_g ~ age_range)
+om_pred_reg = lm(om_mu_g ~ age_range)
 cat("----------\n")
 ####################
 
@@ -97,7 +97,7 @@ fig1 = ggplot(cur_filter, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN)) 
   geom_point(aes(x=Paternal.GT, y=CpG.rate), color="#6db6ff", size=3) +
   scale_x_continuous(breaks = seq(1, 60, by=2)) + 
   scale_y_continuous(breaks = seq(0, 1.8e-8, by=0.4e-8)) + 
-  geom_line(data=pred_df, aes(x=Parental.age, y=Mutation.rate), linetype=2, size=0.75, color="purple") +
+  geom_line(data=om_pred, aes(x=Parental.age, y=Mutation.rate), linetype=2, size=0.75, color="purple") +
   geom_vline(xintercept=1, linetype=3, color="grey", size=0.75) + 
   labs(x="Age of father at conception (y)",y="Mutation rate per site\nper generation") +
   theme_classic() +
