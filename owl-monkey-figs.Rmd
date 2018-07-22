@@ -15,6 +15,7 @@ library(reshape2)
 library(gridExtra)
 library(cowplot)
 library(kableExtra)
+library(akima)
 ```
 
 ![](img/banner-img.png)
@@ -565,6 +566,62 @@ print(var.test(resid(human_study_reg), pred_resids, alternative="two.sided"))
 
 ---
 
+### Figure S4
+
+#### Modeling mutation rates per year
+
+To compare rates between species, mutation rates should be converted to an absolute time-scale: the mutation rate per year ($\mu_y$). This is useful when comparing long-term substitution rates ($k$) between species since the neutral mutation rate and the neutral substitution rate are theoretically equivalent ($\mu_g = k$). To calculate $\mu_y$ we again average the mutational contributions from the three germline stages, but weight the average by the duration of time spent in each period: the duration of time spent in females ($F$), the duration of time spent in males before puberty ($M_0$), and the duration of time spent in males after puberty, previously defined as reproductive longevity ($RL$). 
+
+**Equation 12:** $$ \mu_y = \frac{\mu_{gF} + \mu_{gM0} + \mu_{gM1}}{F + M_0 + RL} $$
+
+Using a range of female and male ages at reproduction and male ages of puberty, we can predict a parameter space for $\mu_y$. What follows is **Figure S4** from the paper.
+
+```{r figS4, fig.width=7, fig.height=6, fig.align="center", message=FALSE, warning=FALSE}
+colfunc <- colorRampPalette(c("#009292", "#920000"))
+
+rt = c();nrt = c();
+for(i in seq(5, 51, 1))
+{
+  for(j in seq(5, 51, 1))
+  {
+    rt = c(rt, i)
+    nrt = c(nrt, j)
+  }
+}
+mu_y = (((human_df * human_mu_c) + (human_dm0 * human_mu_c) + (human_dy1 * rt * human_mu_c)) / (rt + nrt));
+# Calculate mu_y for a range of life history values
+
+par(mar=c(5,5,4,2))
+pred_data = interp(rt,nrt,mu_y)
+filled.contour(pred_data, xlab='RL (years)', ylab=expression('F + M'[0]*' (years)'), cex.lab=2, col=colfunc(26),
+               key.title = {par(cex.main=2);title(main=expression(mu[y]))},
+               plot.axes = { 
+                 contour(pred_data, drawlabels=T, axes=F, frame.plot=F, add=T, col="#999999", lwd=1.5, lty=3, labcex=1);
+                 axis(1);
+                 axis(2);
+                 
+                 points(16.3,43.1,pch=21,bg='#db6d00',col="white",cex=2)
+                 # Kong human point
+                 points(5.64,7.53,pch=21,bg='#b66dff',col="white",cex=2)
+                 # Our owl monkey point
+                 points(16.8,33.8,pch=21,bg='#920000',col="white",cex=2)
+                 # Venn chimp point
+               })
+
+human_mu_y = (((human_df * human_mu_c) + (human_dm0 * human_mu_c) + (human_dy1 * 16.3 * human_mu_c)) / (29.7 + 13.4 + 16.3));
+# Human mutation rate per year (Equation 12)
+
+om_mu_y = (((human_df * human_mu_c) + (human_dm0 * human_mu_c) + (human_dy1 * 5.64 * human_mu_c)) / (6.53 + 1 + 5.64));
+# Owl monkey mutation rate per year (Equation 12)
+
+chimp_mu_y = (((human_df * human_mu_c) + (human_dm0 * human_mu_c) + (human_dy1 * 16.8 * human_mu_c)) / (26.3 + 7.5 + 16.8));
+# Chimp mutation rate per year (Equation 12)
+```
+
+Again, using the underlying mutational parameters predicted from humans, we can predict $\mu_y$ for humans (orange dot), owl monkeys (purple dot), and chimpanzees (red dot) by varying the ages of reproduction and puberty in these species. What jumps out is that $\mu_y$ is not solely dependent on $RL$, but also on the duration of the other life periods. Increasing the age of concesption for females ($F$) tends to decrease $\mu_y$. Increasing the age of puberty in males increases the duration of $M_0$ and also tends to decrease $\mu_y$, though not as drastically. However, increasing $RL$ by either decreasing age of puberty or increasing age of reproduction in males has more complicated effects. At low $F + M_0$, increasing $RL$ tends to decrease $\mu_y$, while at high $F + M_0$ increaseing $RL$ tends to increase $\mu_y$.
+
+---
+
 ### Appendix: Table of parameter definitions
 
 ```{r table2}
@@ -588,7 +645,8 @@ symbols = c(
   "$\\mu_c$",
   "$t_{sc}$",
   "$\\mu_{yM1}$",
-  "$p_{sc}$"
+  "$p_{sc}$",
+  "$\\mu_y$"
   )
 
 defs = c(
@@ -607,7 +665,8 @@ defs = c(
   "Mutation rate per site per cell division",
   "Spermatogenic cycle length (days)",
   "Mutation rate per site per year in males after puberty",
-  "Proportion of spermatagonial cells actively dividing"
+  "Proportion of spermatagonial cells actively dividing",
+  "Mutation rate per site per year"
   )
 
 ests = c(
@@ -626,7 +685,8 @@ ests = c(
   signif(human_mu_c, digits=3),
   paste("Owl monkey: ", om_sc, "^[^ [@derooij86]^]^, Human: ", human_sc, "^[^ [@heller63]^]^, Chimpanzee: ", chimp_sc, "^[^ [@smithwick96]^]^"),
   paste("Owl monkey: ", signif(coef(om_pred_reg)[2], digits=3)),
-  paste("Human: ", signif(human_sp, digits=3))
+  paste("Human: ", signif(human_sp, digits=3)),
+  paste("Owl monkey: ", signif(om_mu_y, digits=3), ", Human: ", signif(human_mu_y, digits=3), ", Chimpanzee: ", signif(chimp_mu_y, digits=3))
   )
 
 param_table = data.frame(symbols, defs, ests)

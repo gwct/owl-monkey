@@ -1,12 +1,13 @@
 ############################################################
 # For owl monkey project, last revised 04.18
-# Plots and statistical tests for Figure 3 and Figure S3
-# in owl monkey paper.
+# Plots and statistical tests for Figure 3, Figure S3, and
+# Figure S4 in owl monkey paper.
 #
 # Gregg Thomas
 ############################################################
 
 library(ggplot2)
+library(akima)
 this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 cat("----------\n")
@@ -189,9 +190,9 @@ if(figs4_opt){
   # A nice(?) color palette
   
   rt = c();nrt = c();
-  for(i in seq(3, 51, 1))
+  for(i in seq(5, 51, 1))
   {
-    for(j in seq(3, 51, 1))
+    for(j in seq(5, 51, 1))
     {
       rt = c(rt, i)
       nrt = c(nrt, j)
@@ -220,7 +221,7 @@ if(figs4_opt){
   # pdf seems to save with some weird grid marks.
   par(mar=c(5,5,4,2))
   pred_data = interp(rt,nrt,mu_y)
-  filled.contour(pred_data, xlab=expression('t'[M1]*' (years)'), ylab=expression('F + M'[0]*' (years)'), cex.lab=2, col=colfunc(21),
+  filled.contour(pred_data, xlab='RL (years)', ylab=expression('F + M'[0]*' (years)'), cex.lab=2, col=colfunc(26),
                  key.title = {par(cex.main=2);title(main=expression(mu[y]))},
                  #key.axes = axis(4, seq(2.5e-10, 1.415e-9, by = 0.5e-10)),
                  plot.axes = { contour(pred_data, drawlabels=T, axes=F, frame.plot=F, add=T, col="#999999", lwd=1.5, lty=3, labcex=1);
@@ -232,11 +233,11 @@ if(figs4_opt){
                    #points(rts, nrts)
                    #text(rts, nrts, labels=muys, pos=1)
                    
-                   points(16.3,43.1,pch=20,col='orange',cex=2)
+                   points(16.3,43.1,pch=21,bg='#db6d00',col="white",cex=2)
                    # Kong human point
-                   points(5.64,7.53,pch=20,col='purple',cex=2)
+                   points(5.64,7.53,pch=21,bg='#b66dff',col="white",cex=2)
                    # Our owl monkey point
-                   points(16.8,33.8,pch=20,col='red',cex=2)
+                   points(16.8,33.8,pch=21,bg='#920000',col="white",cex=2)
                    # Venn chimp point
                    #points(5.15,4.19,pch=3,col='#009292',cex=1)
                    # Pfeiffer vervet point
