@@ -12,10 +12,10 @@ this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 cat("----------\n")
 
-figs3_opt = FALSE
+figs3_opt = T
 # CHANGE TO TRUE TO GENERATE FIG. S3
 
-figs4_opt = TRUE
+figs4_opt = F
 # CHANGE TO TRUE TO GENERATE FIG. S4
 
 ####################
@@ -262,7 +262,7 @@ if(figs4_opt){
   dev.off()
   # Generate the plot and save it as an object. This allows simultaneous saving and displaying.
   
-  png(file="figs4.png", width=8, height=7, units="in", res=400)
+  png(file="figS4.png", width=8, height=7, units="in", res=400)
   print(plot_obj)
   dev.off()
   # Save plot to png file. pdf saves with weird grid lines.
