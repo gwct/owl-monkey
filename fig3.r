@@ -12,11 +12,11 @@ this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 cat("----------\n")
 
+figs2_opt = F
+# CHANGE TO TRUE TO GENERATE FIG. S2
+
 figs3_opt = T
 # CHANGE TO TRUE TO GENERATE FIG. S3
-
-figs4_opt = F
-# CHANGE TO TRUE TO GENERATE FIG. S4
 
 ####################
 ## Estimating model parameters using Kong (2012) data
@@ -63,7 +63,7 @@ cat("----------\n")
 
 ####################
 ## Owl monkey prediction (purple)
-if(figs3_opt){
+if(figs2_opt){
   om_sc = 10.2
 }else{
   om_sc = 16
@@ -90,7 +90,7 @@ cat("----------\n")
 
 ####################
 ## Chimp prediction (red)
-if(figs3_opt){
+if(figs2_opt){
   chimp_sc = 14
 }else{
   chimp_sc = 16
@@ -122,7 +122,7 @@ study_data = read.csv("data/mutation-studies.csv", header=TRUE)
 
 ####################
 ## The plot for Fig. 3
-  if(!figs4_opt){
+  if(!figs3_opt){
   fig3 = ggplot(study_data, aes(x=Paternal.age, y=Mutation.rate, color=Species)) +
     geom_line(data=human_pred, aes(x=Parental.age, y=Mutation.rate), color='#db6d00', size=1) +
     geom_segment(aes(x=human_puberty,y=human_mu_g[1]-human_mu_g[1]/10,xend=human_puberty,yend=human_mu_g[1]+human_mu_g[1]/10), linetype=1, color="#db6d00", size=0.5) +
@@ -148,8 +148,8 @@ study_data = read.csv("data/mutation-studies.csv", header=TRUE)
     ) +
     scale_color_manual(breaks=c("Owl monkey", "Chimpanzee", "Human"), values=c("Human"='#db6d00',"Owl monkey"='#b66dff',"Chimpanzee"='#920000'))
   print(fig3)
-  if(figs3_opt) {
-    ggsave(filename="figS3.pdf", fig3, width=10, height=6, units="in")
+  if(figs2_opt) {
+    ggsave(filename="figS2.pdf", fig3, width=10, height=6, units="in")
   }else{
     ggsave(filename="fig3.pdf", fig3, width=10, height=6, units="in")
   }
@@ -180,8 +180,8 @@ study_data = read.csv("data/mutation-studies.csv", header=TRUE)
 ####################
 
 ####################
-## Fig. S4
-if(figs4_opt){
+## Fig. S3
+if(figs3_opt){
   colfunc <- colorRampPalette(c("#009292", "#920000"))
   #colfunc <- colorRampPalette(c("#009292", "#db6d00", "#920000"))
   #colfunc <- colorRampPalette(c("#009292", "#006ddb", "#920000"))
@@ -262,7 +262,7 @@ if(figs4_opt){
   dev.off()
   # Generate the plot and save it as an object. This allows simultaneous saving and displaying.
   
-  png(file="figS4.png", width=8, height=7, units="in", res=400)
+  png(file="figS3.png", width=8, height=7, units="in", res=400)
   print(plot_obj)
   dev.off()
   # Save plot to png file. pdf saves with weird grid lines.

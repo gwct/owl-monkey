@@ -11,7 +11,7 @@ this.dir <- dirname(parent.frame(2)$ofile)
 setwd(this.dir)
 cat("----------\n")
 
-figs2_opt = F
+figs2_opt = T
 # CHANGE TO TRUE TO GENERATE FIG. S2
 
 ####################
@@ -111,7 +111,7 @@ fig1 = ggplot(cur_filter, aes(x=Paternal.GT, y=Mutation.rate.corrected.for.FN)) 
         )
 print(fig1)
 if(figs2_opt) {
-  ggsave(filename="figS2.pdf", fig1, width=6, height=5, units="in")
+  ggsave(filename="figS1C.pdf", fig1, width=6, height=5, units="in")
 }else{
   ggsave(filename="fig1.pdf", fig1, width=6, height=5, units="in")
 }
