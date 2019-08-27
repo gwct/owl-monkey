@@ -13,5 +13,5 @@
 
 ## Citation
 
-#### Forthcoming
+Thomas GWC, Wang RJ, Puri A, Harris RA, Raveendran M, Hughes DST, Murali SC, Williams LE, Doddapaneni H, Muzny DM, Gibbs RA, Abee CR, Galinski MR, Worley KC, Rogers J, Radivojac P, Hahn MW. 2018. Reproductive longevity predicts mutation rates in primates. *Current Biology*. 28(9):3193-3197. doi: https://doi.org/10.1016/j.cub.2018.08.050 
 

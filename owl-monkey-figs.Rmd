@@ -27,7 +27,7 @@ This document is a brief walkthrough of the methods and code used to generate th
 
 For full descriptions see the paper:
 
-Thomas GWC, Wang RJ, Puri A, Harris RA, Raveendran M, Hughes DST, Murali SC, Williams LE, Doddapaneni H, Muzny DM, Gibbs RA, Abee CR, Galinski MR, Worley KC, Rogers J, Radivojac P, Hahn MW. 2018. Reproductive longevity predicts mutation rates in primates. *Current Biology*. [10.1016/j.cub.2018.08.050](https://doi.org/10.1016/j.cub.2018.08.050)
+Thomas GWC, Wang RJ, Puri A, Harris RA, Raveendran M, Hughes DST, Murali SC, Williams LE, Doddapaneni H, Muzny DM, Gibbs RA, Abee CR, Galinski MR, Worley KC, Rogers J, Radivojac P, Hahn MW. 2018. Reproductive longevity predicts mutation rates in primates. *Current Biology*. 28(19):3193-3197. [10.1016/j.cub.2018.08.050](https://doi.org/10.1016/j.cub.2018.08.050)
 
 To download this document, all accompanying code, and the data visit the following link: [Owl monkey github repository](https://github.com/gwct/owl-monkey)
 
